@@ -16,6 +16,7 @@
 - [How it works](#how-it-works)
 - [Supported formats](#supported-formats)
 - [Requirements](#requirements)
+- [Installing Calibre](#installing-calibre)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Running in the background](#running-in-the-background)
@@ -91,17 +92,45 @@ The script uses **only** the `--comments` field when writing back to the file. I
 | Python 3 | Ships with Ubuntu; used to parse the OPF XML response |
 | Read-write access to your ebook library directory | Required to write the description back into each file |
 
-Install Calibre:
+See [Installing Calibre](#installing-calibre) below for platform-specific instructions.
+
+Verify the required tools are available after installation:
+
+```bash
+which ebook-meta fetch-ebook-metadata
+```
+
+---
+
+## Installing Calibre
+
+The script checks for `ebook-meta` and `fetch-ebook-metadata` at startup and exits immediately with a clear error message if either is missing.
+
+### Ubuntu / Debian
 
 ```bash
 sudo apt update && sudo apt install calibre
 ```
 
-Verify the required tools are available:
+### Other Linux (no apt — standalone installer)
+
+Works on any Linux distribution without root access to a package manager:
 
 ```bash
-which ebook-meta fetch-ebook-metadata
+wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin
 ```
+
+This installs Calibre to `~/calibre-bin` and adds the tools to your `PATH` automatically.
+
+### macOS
+
+```bash
+brew install calibre
+```
+
+### Synology NAS / Unraid / other NAS systems
+
+Installing Calibre natively on these systems is non-trivial and not recommended. Use the included **Docker Compose** setup instead — it handles the Calibre installation automatically inside the container and requires no changes to the host system. See [Docker / Docker Compose](#docker--docker-compose).
 
 ---
 

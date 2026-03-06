@@ -3,63 +3,62 @@ services:
     image: ubuntu:24.04
 
     # -----------------------------------------------------------------------
-    # CONFIGURE YOUR LIBRARY PATH HERE
-    # Change the left-hand side of the volume mount to the absolute path
-    # where your ebook library lives on the host.
+    # LIBRARY PATH
+    # Set BOOK_ROOT to the path inside the container where your library is
+    # mounted. The default matches the volume mount below (/books).
+    # To override without editing this file:
+    #   BOOK_ROOT=/books docker compose up
+    # -----------------------------------------------------------------------
+    environment:
+      - BOOK_ROOT=${BOOK_ROOT:-/books}
+
+    # -----------------------------------------------------------------------
+    # VOLUMES
+    # Left side  = path on the host (edit this to match your library).
+    # Right side = path inside the container (keep as /books unless you also
+    #              change BOOK_ROOT above).
     #
-    # Example:
-    #   /mnt/synology_komga:/books   (NFS mount on the host)
+    # Examples:
+    #   /mnt/synology_komga:/books   (NFS mount)
     #   /srv/ebooks:/books           (local directory)
     #   /home/user/Books:/books      (home directory)
     # -----------------------------------------------------------------------
     volumes:
+      # Mount the cloned repo so no image rebuild is needed when bookf.sh changes.
+      - .:/bookf
+      # Mount your ebook library (edit the host path on the left).
       - /mnt/synology_komga:/books
 
-    # The container path /books is passed to the script via --dir.
-    # Calibre is installed on first run (takes ~30 s); subsequent runs are
-    # faster if you build a custom image instead (see comment below).
-    command: >
+    # Calibre is installed automatically before the script runs.
+    # No manual installation on the host is required.
+    entrypoint: >
       bash -c "
         apt-get update -qq &&
-        apt-get install -y -qq calibre python3 &&
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -qq calibre python3 &&
         chmod +x /bookf/bookf.sh &&
-        /bookf/bookf.sh --dir /books
+        /bookf/bookf.sh --dir \"$$BOOK_ROOT\"
       "
 
-    # Mount the script itself into the container so no image rebuild is
-    # needed when you edit bookf.sh.
-    # If you cloned the repo to /opt/bookf, change the left side accordingly.
-    volumes:
-      - .:/bookf
-      - /mnt/synology_komga:/books
-
-    # Write logs to a file on the host for easy monitoring with:
-    #   tail -f /tmp/update-book-metadata.log
-    # (The script itself also writes to /tmp/update-book-metadata.log
-    #  inside the container; this maps that path to the host.)
-    # Uncomment the line below if you want to persist the log on the host:
-    # - /tmp/update-book-metadata.log:/tmp/update-book-metadata.log
-
-    # Remove the container automatically after it exits.
-    # Delete this line if you want to inspect the container after the run.
+    # The container exits when the script finishes.
     restart: "no"
 
 # -----------------------------------------------------------------------
 # USAGE
 # -----------------------------------------------------------------------
 #
-#   1. Edit the volume path above to point to your ebook library.
+#   1. Edit the host-side volume path above to point to your ebook library.
 #
-#   2. Start the job:
+#   2. Run (Calibre installs automatically on first start):
 #        docker compose up
 #
 #   3. Monitor progress in another terminal:
 #        docker compose logs -f
 #
-#   4. To pass extra flags (e.g. --dry-run or --force), override the
-#      command at the CLI:
+#   4. Pass extra flags (e.g. --dry-run or --force) by overriding the
+#      entrypoint directly:
 #        docker compose run --rm bookf bash -c "
-#          apt-get update -qq && apt-get install -y -qq calibre python3 &&
+#          apt-get update -qq &&
+#          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq calibre python3 &&
 #          /bookf/bookf.sh --dry-run --dir /books"
 #
 #   5. After the run, trigger a Komga library scan:
@@ -69,13 +68,15 @@ services:
 # -----------------------------------------------------------------------
 # PERFORMANCE TIP
 # -----------------------------------------------------------------------
-# Installing Calibre on every container start is slow (~30 s).
-# To avoid this, build a custom image once:
+# Installing Calibre on every container start takes ~30 seconds.
+# Build a reusable image once to skip that step on subsequent runs:
 #
 #   FROM ubuntu:24.04
-#   RUN apt-get update && apt-get install -y calibre python3 && rm -rf /var/lib/apt/lists/*
+#   RUN apt-get update && \
+#       DEBIAN_FRONTEND=noninteractive apt-get install -y calibre python3 && \
+#       rm -rf /var/lib/apt/lists/*
 #
 # Save as Dockerfile, run `docker build -t bookf-runner .`, then replace
-# `image: ubuntu:24.04` above with `image: bookf-runner` and remove the
-# apt-get install step from the command.
+# `image: ubuntu:24.04` with `image: bookf-runner` above and remove the
+# apt-get install lines from the entrypoint.
 # -----------------------------------------------------------------------
