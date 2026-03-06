@@ -64,7 +64,10 @@ ebook file  ──►  ebook-meta (read title + author)
               Komga library scan  ──►  description visible in UI
 ```
 
-The script uses **only** the `--comments` field when writing back to the file. It does **not** touch the title, author, series, ISBN, cover image, or any other field. This makes it safe to run on an existing, well-tagged library.
+The script uses **only** the `--comments` field when writing back to the file. It does **not** touch the title, author, series, ISBN, cover image, or any other field.
+
+> [!WARNING]
+> Even though only the description field is written, you are modifying binary ebook files in place. **Always run with `--dry-run` first** to verify what will be changed, and **make a backup of your library** before the first real run. A bug, a crash, or a full disk mid-write can corrupt a file. Once overwritten, the original is gone.
 
 ---
 
