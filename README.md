@@ -23,6 +23,7 @@
 - [Monitoring progress](#monitoring-progress)
 - [After the run — trigger Komga scan](#after-the-run--trigger-komga-scan)
 - [Docker / Docker Compose](#docker--docker-compose)
+- [Customization](#customization)
 - [Known limitations](#known-limitations)
 - [Comparison to komf](#comparison-to-komf)
 - [License](#license)
@@ -254,13 +255,112 @@ See [`docker-compose.yml`](docker-compose.yml) for the full configuration and in
 
 ---
 
+## Customization
+
+### Changing the default library path
+
+The script defaults to `/mnt/synology_komga`. You do not need to edit the script itself — use `--dir` on the command line:
+
+```bash
+./bookf.sh --dir /srv/books
+./bookf.sh --dir /home/user/Calibre\ Library
+./bookf.sh --dir "/media/nas/ebooks"
+```
+
+To make a path permanent without re-typing it every run, create a small wrapper script:
+
+```bash
+#!/usr/bin/env bash
+exec /path/to/bookf.sh --dir /srv/books "$@"
+```
+
+Save it as e.g. `~/bin/bookf`, make it executable (`chmod +x ~/bin/bookf`), and run `bookf` from anywhere.
+
+### Changing the default path in the script itself
+
+If you always use the same machine and path, you can edit the default directly in `bookf.sh`. Find the line near the top that reads:
+
+```bash
+DIR="/mnt/synology_komga"
+```
+
+and change it to your own path:
+
+```bash
+DIR="/srv/books"
+```
+
+After that, running `./bookf.sh` without any flags will use your path.
+
+### Docker: setting the library path
+
+In the Docker Compose setup, set the `BOOK_ROOT` environment variable and update the volume mount:
+
+```yaml
+environment:
+  - BOOK_ROOT=/books
+
+volumes:
+  - .:/bookf
+  - /srv/books:/books   # ← change the left side to your host path
+```
+
+Or pass it on the command line without editing the file:
+
+```bash
+BOOK_ROOT=/books docker compose up
+```
+
+### Docker: using an NFS or SMB mount
+
+If your library lives on a NAS mounted on the host (e.g. via `/etc/fstab` or `autofs`), just point the left side of the volume at the mount point:
+
+```yaml
+volumes:
+  - /mnt/nas/ebooks:/books
+```
+
+No extra Docker configuration is needed — the container sees the files through the host mount.
+
+### Running on a schedule (cron)
+
+To run bookf automatically (e.g. every night at 02:00):
+
+```bash
+crontab -e
+```
+
+Add a line like:
+
+```
+0 2 * * * /path/to/bookf.sh --dir /srv/books >> /tmp/update-book-metadata.log 2>&1
+```
+
+For Docker:
+
+```
+0 2 * * * docker compose -f /opt/bookf/docker-compose.yml up >> /tmp/bookf-docker.log 2>&1
+```
+
+### Adjusting the sleep delay between requests
+
+The script sleeps 1 second between API calls to avoid hammering remote servers. If your library is very large and you want to speed things up (at the risk of occasional rate-limit errors), edit `bookf.sh` and change:
+
+```bash
+sleep 1
+```
+
+to a shorter value, e.g. `sleep 0.3`. Values below 0.3 seconds are not recommended.
+
+---
+
 ## Known limitations
 
 | Limitation | Detail |
 |------------|--------|
 | Books not indexed online | If a book is not in Google Books or Amazon, `fetch-ebook-metadata` returns nothing and the file is skipped silently. Check the log for `FAILED` lines. |
 | Multiple formats of the same book | If you have `book.epub`, `book.kepub`, and `book.mobi` for the same title, each file is processed and updated individually. This is intentional — each format is a self-contained file. |
-| Counter variables show `0` at end | The `find … | while` construct runs the loop body in a subshell, so counter increments are not visible in the parent shell. The final `Processed/Updated/Skipped/Failed` line will show `0`. Use `grep -c` on the log file to get accurate counts (see [Monitoring progress](#monitoring-progress)). |
+| Counter variables show `0` at end | The `find … \| while` construct runs the loop body in a subshell, so counter increments are not visible in the parent shell. The final `Processed/Updated/Skipped/Failed` line will show `0`. Use `grep -c` on the log file to get accurate counts (see [Monitoring progress](#monitoring-progress)). |
 | Rate limiting | The script sleeps 1 second between requests to be polite to remote APIs. For very large libraries this means the run can take a long time. |
 | Requires write access | The script modifies files in place. Ensure the user running the script has write permission on the library directory. |
 | No ISBN-based lookup | Lookups are done by title + author. ISBN-based lookup (more accurate) is not yet implemented. |
