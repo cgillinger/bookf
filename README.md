@@ -6,7 +6,7 @@
 [![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)](https://www.linux.org/)
 [![Komga](https://img.shields.io/badge/integrates%20with-Komga-orange.svg)](https://komga.org/)
 
-> Automatically fetch and embed book descriptions into EPUB, MOBI, AZW3, and KEPUB files so that **Komga** displays rich summaries for your novel and non-fiction library — using nothing but **Calibre CLI** and Google Books / Amazon as metadata sources.
+> Automatically fetch and embed book descriptions into EPUB, MOBI, AZW3, and KEPUB files so that **Komga** displays rich summaries for your novel and non-fiction library — using nothing but **Calibre CLI** and its built-in metadata sources (Google Books, Amazon, Open Library, and more).
 
 ---
 
@@ -40,7 +40,7 @@ For **novels and non-fiction books**, however, no equivalent automation tool exi
 
 1. Walks your ebook library directory
 2. Reads the title and author already embedded in each file
-3. Queries Google Books and Amazon via Calibre's `fetch-ebook-metadata`
+3. Queries multiple sources via Calibre's `fetch-ebook-metadata` (Google Books, Amazon, Open Library, Edelweiss, Big Book Search — all active by default)
 4. Writes **only** the description (summary) back into the file — leaving every other field untouched
 5. Results are immediately visible after a Komga library scan
 
@@ -54,7 +54,7 @@ No database. No daemon. No configuration files. One script, one command.
 ebook file  ──►  ebook-meta (read title + author)
                       │
                       ▼
-              fetch-ebook-metadata (Google Books / Amazon)
+              fetch-ebook-metadata (Google Books, Amazon, Open Library, …)
                       │
                       ▼
               parse description from OPF XML  (Python 3 one-liner)
@@ -358,7 +358,7 @@ to a shorter value, e.g. `sleep 0.3`. Values below 0.3 seconds are not recommend
 
 | Limitation | Detail |
 |------------|--------|
-| Books not indexed online | If a book is not in Google Books or Amazon, `fetch-ebook-metadata` returns nothing and the file is skipped silently. Check the log for `FAILED` lines. |
+| Books not indexed online | If a book is not found in any of Calibre's metadata sources (Google Books, Amazon, Open Library, Edelweiss, Big Book Search), `fetch-ebook-metadata` returns nothing and the file is skipped silently. Check the log for `FAILED` lines. |
 | Multiple formats of the same book | If you have `book.epub`, `book.kepub`, and `book.mobi` for the same title, each file is processed and updated individually. This is intentional — each format is a self-contained file. |
 | Counter variables show `0` at end | The `find … \| while` construct runs the loop body in a subshell, so counter increments are not visible in the parent shell. The final `Processed/Updated/Skipped/Failed` line will show `0`. Use `grep -c` on the log file to get accurate counts (see [Monitoring progress](#monitoring-progress)). |
 | Rate limiting | The script sleeps 1 second between requests to be polite to remote APIs. For very large libraries this means the run can take a long time. |
@@ -372,7 +372,7 @@ to a shorter value, e.g. `sleep 0.3`. Values below 0.3 seconds are not recommend
 | Feature | **bookf** | **[komf](https://github.com/Snd-R/komf)** |
 |---------|-----------|------------------------------------------|
 | Target content | Novels, non-fiction ebooks | Manga, comics, webtoons |
-| Metadata sources | Google Books, Amazon (via Calibre) | MangaUpdates, AniList, MyAnimeList, etc. |
+| Metadata sources | Google Books, Amazon, Open Library, Edelweiss, Big Book Search (via Calibre) | MangaUpdates, AniList, MyAnimeList, etc. |
 | Supported formats | EPUB, MOBI, AZW3, KEPUB | CBZ, CBR, PDF |
 | Writes to | Ebook file directly (`ebook-meta`) | Komga API + ComicInfo.xml |
 | Architecture | Single Bash script, no daemon | Long-running JVM service |

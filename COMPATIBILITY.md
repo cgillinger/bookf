@@ -31,14 +31,27 @@ This document describes tested environments, supported formats, and known behavi
 
 ## Metadata sources
 
-Calibre's `fetch-ebook-metadata` queries these sources automatically, in order:
+Calibre's `fetch-ebook-metadata` queries all enabled plugins simultaneously and merges results. The full set of built-in plugins (all active by default) is:
 
-| Source | Coverage |
-|--------|----------|
-| **Google Books** | Best coverage for English-language novels and non-fiction |
-| **Amazon** | Good coverage; especially useful for books not in Google Books |
+| Plugin | Notes |
+|--------|-------|
+| **Google Books** | Best general coverage for novels and non-fiction |
+| **Google Images** | Fetches cover images — does not contribute text descriptions |
+| **Amazon.com** | Good coverage; strong on English-language titles |
+| **Open Library** | Internet Archive database; good for older and classic works |
+| **Edelweiss** | Publisher/trade database (Above the Treeline); useful for recent releases |
+| **Big Book Search** | Aggregates several sources; broadens coverage |
 
-The lookup is done by **title + author** (not ISBN). Results depend on how well the book is indexed in these databases. Self-published, obscure, or non-English titles are more likely to return no results.
+To restrict which plugins are queried, use the `--allowed-plugin` flag:
+
+```bash
+fetch-ebook-metadata --allowed-plugin "Google Books" --allowed-plugin "Amazon.com" \
+  --title "Dune" --authors "Frank Herbert"
+```
+
+The script does **not** pass `--allowed-plugin`, so all plugins run by default.
+
+The lookup is done by **title + author** (not ISBN). Results depend on how well the book is indexed across these sources. Self-published, obscure, or non-English titles are more likely to return no results even with all plugins active.
 
 ---
 
