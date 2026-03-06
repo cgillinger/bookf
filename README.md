@@ -30,7 +30,7 @@
 
 ## Why bookf exists
 
-[Komga](https://komga.org/) is an excellent self-hosted media server for ebooks and comics. It reads metadata embedded directly in the ebook files. For **manga and comics** there is already a great tool called **[komf](https://github.com/gotson/komga)** that pulls metadata from MangaUpdates, AniList, and similar sources.
+[Komga](https://komga.org/) is an excellent self-hosted media server for ebooks and comics. It reads metadata embedded directly in the ebook files. For **manga and comics** there is already a great tool called **[komf](https://github.com/Snd-R/komf)** that pulls metadata from MangaUpdates, AniList, and similar sources.
 
 For **novels and non-fiction books**, however, no equivalent automation tool existed — descriptions (summaries) were often missing entirely from the Komga UI, making it hard to browse your library.
 
