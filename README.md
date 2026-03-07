@@ -327,16 +327,17 @@ tail -f /tmp/update-book-metadata.log
 
 ### Docker: installing the plugin inside the container
 
-If you use the Docker Compose setup, add the plugin installation step to the Dockerfile or entrypoint so it runs before bookf:
+If you use the Docker Compose setup, add the plugin installation step to the Dockerfile or entrypoint so it runs before bookf.
 
-```bash
-wget "https://plugins.calibre-ebook.com/plugins/Goodreads.zip" -O /tmp/Goodreads.zip \
-  && calibre-customize -a /tmp/Goodreads.zip \
-  && rm /tmp/Goodreads.zip
-```
-
-> [!WARNING]
-> The URL above fetches a HTML page, not a ZIP file, which will cause `calibre-customize` to fail. You must download the actual ZIP from the plugin index page using a browser, as described in Step 1 above. Automating this in Docker requires hosting the ZIP yourself or including it in the repository.
+> [!NOTE]
+> The plugin index page at `https://plugins.calibre-ebook.com/` serves an HTML page, not a direct ZIP download. There is no stable direct URL to automate this step. To install the plugin in a container, either:
+> - Download the ZIP manually (as described in Step 1 above) and copy it into the image: `COPY Goodreads.zip /tmp/`
+> - Or host the ZIP file yourself and `wget` from your own URL
+>
+> Then install with:
+> ```bash
+> calibre-customize -a /tmp/Goodreads.zip && rm /tmp/Goodreads.zip
+> ```
 
 ---
 
