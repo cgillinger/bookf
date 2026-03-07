@@ -6,7 +6,7 @@
 [![Platform](https://img.shields.io/badge/platform-linux-lightgrey.svg)](https://www.linux.org/)
 [![Komga](https://img.shields.io/badge/integrates%20with-Komga-orange.svg)](https://komga.org/)
 
-> Automatically fetch and embed book descriptions into EPUB, MOBI, AZW3, and KEPUB files so that **Komga** displays rich summaries for your novel and non-fiction library — using nothing but **Calibre CLI** and its built-in metadata sources (Google Books, Amazon, Open Library, and more).
+> Automatically fetch and embed book descriptions into EPUB, MOBI, AZW3, and KEPUB files so that **Komga** displays rich summaries for your novel and non-fiction library — using nothing but **Calibre CLI** and its built-in metadata sources (Google Books, Amazon, Open Library, and more). Optionally extends to **Goodreads** via a third-party Calibre plugin for better coverage of novels and series.
 
 ---
 
@@ -24,6 +24,7 @@
 - [After the run — trigger Komga scan](#after-the-run--trigger-komga-scan)
 - [Docker / Docker Compose](#docker--docker-compose)
 - [Customization](#customization)
+- [Optional: Adding Goodreads as a metadata source](#optional-adding-goodreads-as-a-metadata-source)
 - [Known limitations](#known-limitations)
 - [Comparison to komf](#comparison-to-komf)
 - [License](#license)
@@ -40,7 +41,7 @@ For **novels and non-fiction books**, however, no equivalent automation tool exi
 
 1. Walks your ebook library directory
 2. Reads the title and author already embedded in each file
-3. Queries multiple sources via Calibre's `fetch-ebook-metadata` (Google Books, Amazon, Open Library, Edelweiss, Big Book Search — all active by default)
+3. Queries multiple sources via Calibre's `fetch-ebook-metadata` (Google Books, Amazon, Open Library, Edelweiss, Big Book Search — all active by default; Goodreads available as an optional plugin)
 4. Writes **only** the description (summary) back into the file — leaving every other field untouched
 5. Results are immediately visible after a Komga library scan
 
@@ -257,6 +258,88 @@ See [`docker-compose.yml`](docker-compose.yml) for the full configuration and in
 
 ## Customization
 
+---
+
+## Optional: Adding Goodreads as a metadata source
+
+By default, bookf uses Calibre's built-in metadata sources: Google Books, Amazon, Open Library, Edelweiss, and Big Book Search. These cover most books well — but for novels, especially series, **Goodreads** often has better descriptions and more accurate series information.
+
+Calibre supports third-party metadata plugins. The Goodreads plugin by **kiwidude68** works via scraping and is actively maintained with support for Calibre 6.x and newer.
+
+> [!NOTE]
+> Once installed, the Goodreads plugin is used automatically by `fetch-ebook-metadata` alongside the built-in sources. No changes to `bookf.sh` are needed.
+
+### Install the Goodreads plugin
+
+**Step 1 — Download the plugin**
+
+Download `Goodreads.zip` from the [Calibre plugin index](https://plugins.calibre-ebook.com/):
+
+1. Open https://plugins.calibre-ebook.com/ in your browser
+2. Search for **Goodreads**
+3. Click **Download plugin** on the metadata plugin row (not the Sync plugin)
+4. Save the file to your Downloads folder
+
+**Step 2 — Install the plugin**
+
+```bash
+calibre-customize -a /path/to/Goodreads.zip
+```
+
+Replace `/path/to/Goodreads.zip` with the actual path to the downloaded file. Example:
+
+```bash
+# Linux default Downloads folder
+calibre-customize -a ~/Downloads/Goodreads.zip
+
+# If you copied it to /tmp
+calibre-customize -a /tmp/Goodreads.zip
+```
+
+**Step 3 — Verify the installation**
+
+```bash
+fetch-ebook-metadata --help | grep -i goodreads
+```
+
+Expected output:
+
+```
+plugin names: Goodreads, Google, Google Images,
+```
+
+If `Goodreads` appears in the list, the plugin is active and will be used automatically on the next run.
+
+### Re-run bookf to pick up missed books
+
+After installing the plugin, run bookf again without `--force` — it will skip books that already have a description and only retry those that previously failed:
+
+```bash
+./bookf.sh --dir /srv/books
+```
+
+Or in the background for large libraries:
+
+```bash
+nohup ./bookf.sh --dir /srv/books >> /tmp/update-book-metadata.log 2>&1 &
+tail -f /tmp/update-book-metadata.log
+```
+
+### Docker: installing the plugin inside the container
+
+If you use the Docker Compose setup, add the plugin installation step to the Dockerfile or entrypoint so it runs before bookf:
+
+```bash
+wget "https://plugins.calibre-ebook.com/plugins/Goodreads.zip" -O /tmp/Goodreads.zip \
+  && calibre-customize -a /tmp/Goodreads.zip \
+  && rm /tmp/Goodreads.zip
+```
+
+> [!WARNING]
+> The URL above fetches a HTML page, not a ZIP file, which will cause `calibre-customize` to fail. You must download the actual ZIP from the plugin index page using a browser, as described in Step 1 above. Automating this in Docker requires hosting the ZIP yourself or including it in the repository.
+
+---
+
 ### Changing the default library path
 
 The script defaults to `/mnt/synology_komga`. You do not need to edit the script itself — use `--dir` on the command line:
@@ -359,6 +442,7 @@ to a shorter value, e.g. `sleep 0.3`. Values below 0.3 seconds are not recommend
 | Limitation | Detail |
 |------------|--------|
 | Books not indexed online | If a book is not found in any of Calibre's metadata sources (Google Books, Amazon, Open Library, Edelweiss, Big Book Search), `fetch-ebook-metadata` returns nothing and the file is skipped silently. Check the log for `FAILED` lines. |
+| Books not indexed by built-in sources | If a book is missing from Google Books, Amazon, and Open Library, installing the optional Goodreads plugin (see [Optional: Adding Goodreads as a metadata source](#optional-adding-goodreads-as-a-metadata-source)) often resolves this for novels and series. |
 | Multiple formats of the same book | If you have `book.epub`, `book.kepub`, and `book.mobi` for the same title, each file is processed and updated individually. This is intentional — each format is a self-contained file. |
 | Counter variables show `0` at end | The `find … \| while` construct runs the loop body in a subshell, so counter increments are not visible in the parent shell. The final `Processed/Updated/Skipped/Failed` line will show `0`. Use `grep -c` on the log file to get accurate counts (see [Monitoring progress](#monitoring-progress)). |
 | Rate limiting | The script sleeps 1 second between requests to be polite to remote APIs. For very large libraries this means the run can take a long time. |
@@ -372,7 +456,7 @@ to a shorter value, e.g. `sleep 0.3`. Values below 0.3 seconds are not recommend
 | Feature | **bookf** | **[komf](https://github.com/Snd-R/komf)** |
 |---------|-----------|------------------------------------------|
 | Target content | Novels, non-fiction ebooks | Manga, comics, webtoons |
-| Metadata sources | Google Books, Amazon, Open Library, Edelweiss, Big Book Search (via Calibre) | MangaUpdates, AniList, MyAnimeList, etc. |
+| Metadata sources | Google Books, Amazon, Open Library, Edelweiss, Big Book Search (built-in); Goodreads (optional plugin) | MangaUpdates, AniList, MyAnimeList, etc. |
 | Supported formats | EPUB, MOBI, AZW3, KEPUB | CBZ, CBR, PDF |
 | Writes to | Ebook file directly (`ebook-meta`) | Komga API + ComicInfo.xml |
 | Architecture | Single Bash script, no daemon | Long-running JVM service |
