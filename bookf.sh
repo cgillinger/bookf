@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # bookf.sh
-# Fyller i description-fältet i e-böcker med Calibre CLI
-# Körs på server2, läser/skriver via NFS-mount /mnt/synology_komga
+# Populates the description field in e-books using the Calibre CLI
+# Reads/writes the ebook library via the path specified by --dir (default: /mnt/synology_komga)
 #
 # Syntax: ./bookf.sh [--dry-run] [--force] [--dir /path]
 
@@ -20,7 +20,7 @@ while [[ $# -gt 0 ]]; do
         --dry-run) DRY_RUN=true ;;
         --force)   FORCE=true ;;
         --dir)     BOOK_ROOT="$2"; shift ;;
-        *) echo "Okänt argument: $1"; exit 1 ;;
+        *) echo "Unknown argument: $1"; exit 1 ;;
     esac
     shift
 done
