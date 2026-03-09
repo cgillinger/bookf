@@ -27,6 +27,7 @@
 - [Optional: Adding Goodreads as a metadata source](#optional-adding-goodreads-as-a-metadata-source)
 - [Known limitations](#known-limitations)
 - [Comparison to komf](#comparison-to-komf)
+- [Contributing](#contributing)
 - [License](#license)
 
 ---
@@ -471,6 +472,16 @@ Both tools are complementary and can run side-by-side on the same Komga server �
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
+
+---
+
+## Contributing
+
+bookf started as a personal tool and remains so. It is published publicly because others might find it useful — but the goal is simply that **it works for me**.
+
+Forks are warmly welcomed. If you want to take the project in your own direction, or adapt it for your own setup, go ahead.
+
+Pull requests *may* be reviewed and merged, but there are no guarantees. I work on this in my spare time, and I may be slow to respond or decline changes that do not fit my use case — even if they are well-written and useful to others. If you need a specific feature, a fork is probably your most reliable path.
 
 ---
 
