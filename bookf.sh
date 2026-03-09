@@ -5,6 +5,8 @@
 #
 # Syntax: ./bookf.sh [--dry-run] [--force] [--dir /path]
 
+set -euo pipefail
+
 BOOK_ROOT="/mnt/synology_komga"
 TMP_META=$(mktemp /tmp/meta_XXXXXX.opf)
 LOG_FILE="/tmp/update-book-metadata.log"
@@ -19,11 +21,20 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry-run) DRY_RUN=true ;;
         --force)   FORCE=true ;;
-        --dir)     BOOK_ROOT="$2"; shift ;;
+        --dir)
+            if [[ $# -lt 2 || -z "$2" ]]; then
+                echo "ERROR: --dir requires a path argument"; exit 1
+            fi
+            BOOK_ROOT="$2"; shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
     shift
 done
+
+if [[ ! -d "$BOOK_ROOT" ]]; then
+    echo "ERROR: Library directory not found: $BOOK_ROOT"
+    exit 1
+fi
 
 cleanup() { rm -f "$TMP_META"; }
 trap cleanup EXIT
@@ -40,7 +51,7 @@ done
 log "=== Starting metadata update ==="
 log "Root: $BOOK_ROOT | dry-run: $DRY_RUN | force: $FORCE"
 
-find "$BOOK_ROOT" -type f \( -iname "*.epub" -o -iname "*.mobi" -o -iname "*.azw3" -o -iname "*.kepub" \) -print0 | while IFS= read -r -d '' file; do
+while IFS= read -r -d '' file; do
 
     PROCESSED=$((PROCESSED + 1))
     fname=$(basename "$file")
@@ -97,10 +108,15 @@ except Exception:
 
     sleep 1
 
-done
+done < <(find "$BOOK_ROOT" -type f \( -iname "*.epub" -o -iname "*.mobi" -o -iname "*.azw3" -o -iname "*.kepub" \) -print0)
 
 log "=== Done ==="
 log "Processed: $PROCESSED | Updated: $UPDATED | Skipped: $SKIPPED | Failed: $FAILED"
 echo ""
 echo "Trigger Komga library scan:"
 echo "  curl -u admin:PASSWORD -X POST http://YOUR_KOMGA_IP:8342/api/v1/libraries/LIBRARY_ID/scan"
+
+if [[ $FAILED -gt 0 ]]; then
+    exit 2
+fi
+exit 0
