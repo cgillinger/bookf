@@ -27,6 +27,7 @@
 - [Optional: Adding Goodreads as a metadata source](#optional-adding-goodreads-as-a-metadata-source)
 - [Known limitations](#known-limitations)
 - [Comparison to komf](#comparison-to-komf)
+- [Contributing](#contributing)
 - [License](#license)
 
 ---
@@ -365,13 +366,13 @@ Save it as e.g. `~/bin/bookf`, make it executable (`chmod +x ~/bin/bookf`), and 
 If you always use the same machine and path, you can edit the default directly in `bookf.sh`. Find the line near the top that reads:
 
 ```bash
-DIR="/mnt/synology_komga"
+BOOK_ROOT="/mnt/synology_komga"
 ```
 
 and change it to your own path:
 
 ```bash
-DIR="/srv/books"
+BOOK_ROOT="/srv/books"
 ```
 
 After that, running `./bookf.sh` without any flags will use your path.
@@ -445,7 +446,7 @@ to a shorter value, e.g. `sleep 0.3`. Values below 0.3 seconds are not recommend
 | Books not indexed online | If a book is not found in any of Calibre's metadata sources (Google Books, Amazon, Open Library, Edelweiss, Big Book Search), `fetch-ebook-metadata` returns nothing and the file is skipped silently. Check the log for `FAILED` lines. |
 | Books not indexed by built-in sources | If a book is missing from Google Books, Amazon, and Open Library, installing the optional Goodreads plugin (see [Optional: Adding Goodreads as a metadata source](#optional-adding-goodreads-as-a-metadata-source)) often resolves this for novels and series. |
 | Multiple formats of the same book | If you have `book.epub`, `book.kepub`, and `book.mobi` for the same title, each file is processed and updated individually. This is intentional — each format is a self-contained file. |
-| Counter variables show `0` at end | The `find … \| while` construct runs the loop body in a subshell, so counter increments are not visible in the parent shell. The final `Processed/Updated/Skipped/Failed` line will show `0`. Use `grep -c` on the log file to get accurate counts (see [Monitoring progress](#monitoring-progress)). |
+| Counter variables | The script uses process substitution (`< <(find …)`) to keep the loop in the current shell, so `Processed/Updated/Skipped/Failed` counts are accurate. If you run on a shell that does not support process substitution (e.g. `/bin/sh`), use `grep -c` on the log file instead (see [Monitoring progress](#monitoring-progress)). |
 | Rate limiting | The script sleeps 1 second between requests to be polite to remote APIs. For very large libraries this means the run can take a long time. |
 | Requires write access | The script modifies files in place. Ensure the user running the script has write permission on the library directory. |
 | No ISBN-based lookup | Lookups are done by title + author. ISBN-based lookup (more accurate) is not yet implemented. |
@@ -471,6 +472,16 @@ Both tools are complementary and can run side-by-side on the same Komga server �
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
+
+---
+
+## Contributing
+
+bookf started as a personal tool and remains so. It is published publicly because others might find it useful — but the goal is simply that **it works for me**.
+
+Forks are warmly welcomed. If you want to take the project in your own direction, or adapt it for your own setup, go ahead.
+
+Pull requests *may* be reviewed and merged, but there are no guarantees. I work on this in my spare time, and I may be slow to respond or decline changes that do not fit my use case — even if they are well-written and useful to others. If you need a specific feature, a fork is probably your most reliable path.
 
 ---
 
