@@ -19,6 +19,7 @@
 - [Installing Calibre](#installing-calibre)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Configuration](#configuration)
 - [Running in the background](#running-in-the-background)
 - [Monitoring progress](#monitoring-progress)
 - [After the run — trigger Komga scan](#after-the-run--trigger-komga-scan)
@@ -68,7 +69,7 @@ ebook file  ──►  ebook-meta (read title + author)
               Komga library scan  ──►  description visible in UI
 ```
 
-The script uses **only** the `--comments` field when writing back to the file. It does **not** touch the title, author, series, ISBN, cover image, or any other field.
+By default, bookf writes **only the description** field. Which fields are written is controlled by `bookf.conf` — see [Configuration](#configuration). The title and author are never written; they are used only as lookup keys.
 
 > [!WARNING]
 > Even though only the description field is written, you are modifying binary ebook files in place. **Always run with `--dry-run` first** to verify what will be changed, and **make a backup of your library** before the first real run. A bug, a crash, or a full disk mid-write can corrupt a file. Once overwritten, the original is gone.
@@ -156,15 +157,16 @@ sudo cp bookf.sh /usr/local/bin/bookf
 ## Usage
 
 ```
-bookf.sh [--dry-run] [--force] [--dir /path/to/library]
+bookf.sh [--dry-run] [--force] [--dir /path/to/library] [--config /path/to/bookf.conf]
 ```
 
 | Flag | Description |
 |------|-------------|
-| *(no flags)* | Process all ebooks under `/mnt/synology_komga` that have no description yet |
+| *(no flags)* | Process all ebooks under `/mnt/synology_komga` using field rules from config |
 | `--dry-run` | Scan and log what *would* be done — no files are modified |
-| `--force` | Re-fetch and overwrite descriptions even if a description already exists |
+| `--force` | Treat all enabled fields as `overwrite` for this run, regardless of config |
 | `--dir /path` | Override the default library root path |
+| `--config /path` | Load a specific config file (overrides default search order) |
 
 ### Examples
 
@@ -181,6 +183,93 @@ bookf.sh [--dry-run] [--force] [--dir /path/to/library]
 # Use the default path (/mnt/synology_komga)
 ./bookf.sh
 ```
+
+---
+
+## Configuration
+
+bookf reads a config file (`bookf.conf`) that controls which metadata fields to fetch and how to handle existing values.
+
+### Field values
+
+Each field can be set to one of three values:
+
+| Value | Meaning |
+|-------|---------|
+| `no` | Skip this field entirely — never fetch or write it |
+| `empty` | Write the field only if it is currently missing or empty in the file |
+| `overwrite` | Always write the field, replacing any existing value |
+
+### Default config file
+
+A `bookf.conf` is included in the repo with safe defaults (only `description` is active):
+
+```ini
+# bookf.conf — metadata field control
+# Values per field: no | empty | overwrite
+
+description=empty
+cover=no
+publisher=no
+tags=no
+series=no
+isbn=no
+language=no
+date=no
+
+# Metadata sources: comma-separated plugin names, or "all"
+# Available: Google Books, Google Images, Amazon.com, Open Library, Edelweiss, Big Book Search
+# If Goodreads plugin is installed, add: Goodreads
+sources=all
+```
+
+### Where to place the config file
+
+bookf searches for a config file in this order:
+
+1. The path given by `--config /path/to/bookf.conf`
+2. `bookf.conf` in the same directory as `bookf.sh`
+3. `~/.config/bookf/bookf.conf`
+4. Hardcoded defaults (only `description=empty`, everything else `no`)
+
+The script logs which config file was loaded (or "using defaults") at startup.
+
+### Practical examples
+
+**"I want covers filled in too"**
+
+```ini
+description=empty
+cover=empty
+```
+
+**"Fill in everything that's missing, but never overwrite what's already there"**
+
+```ini
+description=empty
+cover=empty
+publisher=empty
+tags=empty
+series=empty
+isbn=empty
+language=empty
+date=empty
+sources=all
+```
+
+**"Only use Google Books as the metadata source"**
+
+```ini
+description=empty
+sources=Google Books
+```
+
+### Notes
+
+- **`--force`** on the command line overrides all enabled fields (not `no`) to `overwrite` for that run, regardless of what the config says.
+- **`series`** controls both the series name and the series index — they are always written together or not at all.
+- **`tags`** replaces all existing tags in the file. It does not merge with tags already present.
+- **Title and author are never written** by bookf — they are read-only lookup keys.
 
 ---
 
@@ -253,11 +342,26 @@ docker compose up
 
 The container installs Calibre, mounts your library, runs the script, and exits. Your ebook files are modified in place on the host volume.
 
+To use a custom `bookf.conf` inside the container, add a volume mount:
+
+```yaml
+volumes:
+  - .:/bookf
+  - /mnt/synology_komga:/books
+  - ./bookf.conf:/bookf/bookf.conf   # ← mount your config file
+```
+
+The script will find it automatically at `/bookf/bookf.conf` (same directory as `bookf.sh`).
+
 See [`docker-compose.yml`](docker-compose.yml) for the full configuration and inline comments.
 
 ---
 
 ## Customization
+
+For controlling which fields are fetched and how existing values are handled, see [Configuration](#configuration).
+
+The sections below cover other common customizations: changing the default library path, scheduling, and adjusting the request rate.
 
 ---
 
@@ -450,6 +554,8 @@ to a shorter value, e.g. `sleep 0.3`. Values below 0.3 seconds are not recommend
 | Rate limiting | The script sleeps 1 second between requests to be polite to remote APIs. For very large libraries this means the run can take a long time. |
 | Requires write access | The script modifies files in place. Ensure the user running the script has write permission on the library directory. |
 | No ISBN-based lookup | Lookups are done by title + author. ISBN-based lookup (more accurate) is not yet implemented. |
+| Tags replace, not merge | When `tags=empty` or `tags=overwrite` is set, bookf writes the full tag list from the online source, replacing all existing tags in the file. There is no option to merge tag lists. |
+| Cover requires network access | The `cover` field downloads the image URL returned in the OPF. If the URL is unreachable or returns an empty file, the cover is silently skipped. |
 
 ---
 
